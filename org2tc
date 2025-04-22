@@ -97,7 +97,7 @@ for fd in args.orgfiles:
     (billcode, taskcode) = (None, None)
 
     if args.billcode is None:
-        match = re.search('\n#\+PROPERTY: BILLCODE (.+)\n', contents, re.IGNORECASE)
+        match = re.search(r'\n#\+PROPERTY: BILLCODE (.+)\n', contents, re.IGNORECASE)
         if match:
             billcode = match.group(1)
         else:
@@ -106,21 +106,21 @@ for fd in args.orgfiles:
         billcode = args.billcode
 
     for line in contents.splitlines():
-        match = re.search("^(\*+)\s*(.+)", line)
+        match = re.search(r"^(\*+)\s*(.+)", line)
         if match:
             headings[len(match.group(1))] = match.group(2)
 
-        match = re.search("^(\*+)\s+(TODO|DONE)?(\s+\[#[ABC]\])?\s*(.+)", line)
+        match = re.search(r"^(\*+)\s+(TODO|DONE)?(\s+\[#[ABC]\])?\s*(.+)", line)
         if match:
             add_events()
 
             depth   = len(match.group(1))
             keyword = match.group(2)
             title   = match.group(4)
-            match = re.search("(.+?)\s+:\S+:$", title)
+            match = re.search(r"(.+?)\s+:\S+:$", title)
             if match:
                 title = match.group(1)
-            match = re.search("\[\[.*\]\]\s+(.+?)$", title)
+            match = re.search(r"\[\[.*\]\]\s+(.+?)$", title)
             if match:
                 title = match.group(1)
             headings[depth] = title
@@ -141,7 +141,7 @@ for fd in args.orgfiles:
                 title = None
 
         if title:
-            match = re.search("CLOCK:\s+\[(.+?)\](--\[(.+?)\])?", line)
+            match = re.search(r"CLOCK:\s+\[(.+?)\](--\[(.+?)\])?", line)
             if match:
                 clock_in  = parse_org_time(match.group(1))
                 clock_out = match.group(3) # optional
@@ -150,7 +150,7 @@ for fd in args.orgfiles:
                 else:
                     clock_out = None
 
-                if (not range_start or clock_in >= range_start) and \
+                if (not range_start or clock_in >= range_start) or \
                    (not range_end or clock_in < range_end):
                    clocks.append((clock_in, clock_out, billcode, taskcode))
                 elif clock_in < range_start and clock_out > range_start:
@@ -158,7 +158,7 @@ for fd in args.orgfiles:
                 elif clock_in < range_end and clock_out > range_end:
                    clocks.append((clock_in, range_end, billcode, taskcode))
 
-            match = re.search(":BILLCODE:\s+(.+)", line)
+            match = re.search(r":BILLCODE:\s+(.+)", line)
             if match:
                 billcode = match.group(1)
                 taskcode = "Misc"
@@ -167,7 +167,7 @@ for fd in args.orgfiles:
                     patched.append((clock_in, clock_out, billcode, taskcode))
                 clocks = patched
 
-            match = re.search(":TASKCODE:\s+(.+)", line)
+            match = re.search(r":TASKCODE:\s+(.+)", line)
             if match:
                 taskcode = match.group(1)
                 patched = []

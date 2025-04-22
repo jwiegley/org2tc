@@ -3,7 +3,7 @@
 
 pkgs.stdenv.mkDerivation {
   name = "org2tc";
-  buildInputs = [ pkgs.python36 ];
+  buildInputs = [ pkgs.python3 ];
   src = ./.;
   unpackPhase = "";
   installPhase = ''
