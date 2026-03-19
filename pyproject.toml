@@ -1,0 +1,47 @@
+[project]
+name = "org2tc"
+version = "0.1.0"
+description = "Convert org-mode clock entries to timeclock format for Ledger"
+requires-python = ">=3.9"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+extend-include = ["org2tc"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF",
+    "N", "S", "A", "T20", "PLW", "PLR", "PLE",
+]
+ignore = [
+    "T20",     # print() is correct for CLI tools
+    "PLR2004", # magic values acceptable in scripts
+    "S603",    # subprocess call in tests
+    "S607",    # partial executable path in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"org2tc" = [
+    "E402",    # module-level code between imports (locale.setlocale)
+    "PLW0603", # global statement (acknowledged in code)
+    "PLW0602", # global variable usage
+    "C901",    # complex function (add_events uses globals by design)
+    "N816",    # mixed case variable (billcode/taskcode tuple unpacking)
+    "S101",    # assert usage
+    "UP031",   # %-format strings (legacy code style)
+    "SIM108",  # ternary operator suggestions (readability preference)
+    "B007",    # unused loop variable (intentional tuple unpacking)
+]
+"tests/*" = ["S101", "S603", "S607", "PLR2004", "PLW1510"]
+"scripts/*" = ["S603", "S607", "PLW1510"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+include = ["org2tc"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true

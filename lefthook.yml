@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  commands:
+    ruff-format:
+      run: ruff format --check org2tc tests/ scripts/
+    ruff-lint:
+      run: ruff check org2tc tests/ scripts/
+    nix-build:
+      run: nix build --no-warn-dirty 2>&1
+    tests-and-coverage:
+      run: >
+        coverage erase &&
+        LC_ALL=C ORG2TC_COVERAGE=1 python3 -m pytest tests/test_org2tc.py -x -q &&
+        coverage report --include='*org2tc' --fail-under=80
+    fuzz:
+      run: LC_ALL=C python3 -m pytest tests/test_fuzz.py -x -q
+    performance:
+      run: LC_ALL=C python3 scripts/benchmark.py --check

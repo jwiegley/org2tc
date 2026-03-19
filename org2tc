@@ -1,18 +1,16 @@
 #!/usr/bin/env python
 
-'''Take an org-mode file as input and print a timeclock file as
+"""Take an org-mode file as input and print a timeclock file as
 output. This can then be read directly by Ledger for fancy time
 reporting and querying. Fields :BILLCODE: and :TASKCODE: are parsed to
 generate lines compatible with the format expected by ledger
 ("billcode taskcode").
 
 See also http://ledger-cli.org/2.6/ledger.html#Using-timeclock-to-record-billable-time
-'''
+"""
 
-from __future__ import print_function
-
-__copyright__ = 'MIT'
-__license__ = '''
+__copyright__ = "MIT"
+__license__ = """
 Copyright (c) 2011-2016 John Wiegley
               2016-2017 Antoine Beaupre
 
@@ -33,94 +31,106 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-'''
+"""
 
 import argparse
 import locale
-locale.setlocale(locale.LC_ALL, '')
-import sys
+
+locale.setlocale(locale.LC_ALL, "")
 import re
+import sys
 import time
 
 iso_date_fmt = "%Y-%m-%d %H:%M:%S"
 
+
 def parse_org_time(s):
     return time.strptime(s, "%Y-%m-%d %a %H:%M")
 
+
 def parse_timestamp(s):
-    if s[0] == '[':
+    if s[0] == "[":
         return time.strptime(s, "[%Y-%m-%d %a %H:%M]")
     else:
         return time.strptime(s, iso_date_fmt)
+
 
 def add_events():
     # XXX: those globals should really be cleaned up, maybe through a clock object or named tuple
     global acct, clocks, billcode, taskcode, events, keyword, title
     if clocks:
-        for (clock_in, clock_out, billcode, taskcode) in clocks:
+        for clock_in, clock_out, billcode, taskcode in clocks:
             if billcode and ":" not in billcode and taskcode:
                 acct = "%s:%s" % (billcode, taskcode)
-            events.append((clock_in, clock_out, keyword,
-                           ("%s  %s" % (acct, title))
-                           if acct else title))
+            events.append(
+                (clock_in, clock_out, keyword, ("%s  %s" % (acct, title)) if acct else title)
+            )
         clocks = []
 
+
 events = []
-title  = None
+title = None
 clocks = []
 
-parser = argparse.ArgumentParser(description='convert org clocks into timeclock',
-                                 epilog=__doc__ +
-                                 '''Note that TIME is provided in the following format: %s'''
-                                 % iso_date_fmt)
-parser.add_argument('orgfiles', type=argparse.FileType('r'), nargs='+',
-                    help='Org file(s) to process')
-parser.add_argument('-s', '--start', metavar='TIME', help='process only entries from this date')
-parser.add_argument('-e', '--end', metavar='TIME', help='process only entries to this date')
-parser.add_argument('-r', '--regex', help='process only entries matching this regex')
-parser.add_argument('-o', '--output', help='output file (default: stdout)',
-                    type=argparse.FileType('w'), default=sys.stdout)
-parser.add_argument('-b', '--billcode', help='default billcode if not found (default: <Unknown>',
-                    default=None)
+parser = argparse.ArgumentParser(
+    description="convert org clocks into timeclock",
+    epilog=__doc__ + """Note that TIME is provided in the following format: %s""" % iso_date_fmt,
+)
+parser.add_argument(
+    "orgfiles", type=argparse.FileType("r"), nargs="+", help="Org file(s) to process"
+)
+parser.add_argument("-s", "--start", metavar="TIME", help="process only entries from this date")
+parser.add_argument("-e", "--end", metavar="TIME", help="process only entries to this date")
+parser.add_argument("-r", "--regex", help="process only entries matching this regex")
+parser.add_argument(
+    "-o",
+    "--output",
+    help="output file (default: stdout)",
+    type=argparse.FileType("w"),
+    default=sys.stdout,
+)
+parser.add_argument(
+    "-b", "--billcode", help="default billcode if not found (default: <Unknown>", default=None
+)
 
 args = parser.parse_args()
 
 range_start = parse_timestamp(args.start) if args.start else None
-range_end   = parse_timestamp(args.end) if args.end else None
-regex       = args.regex
+range_end = parse_timestamp(args.end) if args.end else None
+regex = args.regex
 
 for fd in args.orgfiles:
     headings = [None] * 9
-    acct     = "<None>"
+    acct = "<None>"
     contents = fd.read()
 
     (billcode, taskcode) = (None, None)
 
     if args.billcode is None:
-        match = re.search('\n#\+PROPERTY: BILLCODE (.+)\n', contents, re.IGNORECASE)
+        match = re.search(r"\n#\+PROPERTY: BILLCODE (.+)\n", contents, re.IGNORECASE)
         if match:
             billcode = match.group(1)
         else:
-            billcode = '<Unknown>'
+            billcode = "<Unknown>"
     else:
         billcode = args.billcode
 
     for line in contents.splitlines():
-        match = re.search("^(\*+)\s*(.+)", line)
+        match = re.search(r"^(\*+)\s*(.+)", line)
         if match:
             headings[len(match.group(1))] = match.group(2)
 
-        match = re.search("^(\*+)\s+(TODO|DONE)?(\s+\[#[ABC]\])?\s*(.+)", line)
+        match = re.search(r"^(\*+)\s+(TODO|DONE)?(\s+\[#[ABC]\])?\s*(.+)", line)
         if match:
             add_events()
 
-            depth   = len(match.group(1))
+            depth = len(match.group(1))
             keyword = match.group(2)
-            title   = match.group(4)
-            match = re.search("(.+?)\s+:\S+:$", title)
+            title = match.group(4)
+            match = re.search(r"(.+?)\s+:\S+:$", title)
             if match:
                 title = match.group(1)
-            match = re.search("\[\[.*\]\]\s+(.+?)$", title)
+            match = re.search(r"\[\[.*\]\]\s+(.+?)$", title)
             if match:
                 title = match.group(1)
             headings[depth] = title
@@ -128,10 +138,11 @@ for fd in args.orgfiles:
             i = 0
             prefix = ""
             while i < depth:
-                if prefix:
-                    prefix += ":" + headings[i]
-                else:
-                    prefix = headings[i]
+                if headings[i] is not None:
+                    if prefix:
+                        prefix += ":" + headings[i]
+                    else:
+                        prefix = headings[i]
                 i += 1
 
             if prefix:
@@ -141,37 +152,38 @@ for fd in args.orgfiles:
                 title = None
 
         if title:
-            match = re.search("CLOCK:\s+\[(.+?)\](--\[(.+?)\])?", line)
+            match = re.search(r"CLOCK:\s+\[(.+?)\](--\[(.+?)\])?", line)
             if match:
-                clock_in  = parse_org_time(match.group(1))
-                clock_out = match.group(3) # optional
+                clock_in = parse_org_time(match.group(1))
+                clock_out = match.group(3)  # optional
                 if clock_out:
                     clock_out = parse_org_time(clock_out)
                 else:
                     clock_out = None
 
-                if (not range_start or clock_in >= range_start) and \
-                   (not range_end or clock_in < range_end):
-                   clocks.append((clock_in, clock_out, billcode, taskcode))
+                if (not range_start or clock_in >= range_start) and (
+                    not range_end or clock_in < range_end
+                ):
+                    clocks.append((clock_in, clock_out, billcode, taskcode))
                 elif clock_in < range_start and clock_out > range_start:
-                   clocks.append((range_start, clock_out, billcode, taskcode))
+                    clocks.append((range_start, clock_out, billcode, taskcode))
                 elif clock_in < range_end and clock_out > range_end:
-                   clocks.append((clock_in, range_end, billcode, taskcode))
+                    clocks.append((clock_in, range_end, billcode, taskcode))
 
-            match = re.search(":BILLCODE:\s+(.+)", line)
+            match = re.search(r":BILLCODE:\s+(.+)", line)
             if match:
                 billcode = match.group(1)
                 taskcode = "Misc"
                 patched = []
-                for (clock_in, clock_out, oldBillcode, taskcode) in clocks:
+                for clock_in, clock_out, oldBillcode, taskcode in clocks:
                     patched.append((clock_in, clock_out, billcode, taskcode))
                 clocks = patched
 
-            match = re.search(":TASKCODE:\s+(.+)", line)
+            match = re.search(r":TASKCODE:\s+(.+)", line)
             if match:
                 taskcode = match.group(1)
                 patched = []
-                for (clock_in, clock_out, billcode, oldTaskcode) in clocks:
+                for clock_in, clock_out, billcode, oldTaskcode in clocks:
                     patched.append((clock_in, clock_out, billcode, taskcode))
                 clocks = patched
 
@@ -181,11 +193,11 @@ for fd in args.orgfiles:
 events.sort(key=lambda x: time.mktime(x[0]))
 
 for event in events:
-    print("i %s %s" % (time.strftime(iso_date_fmt, event[0]), event[3]),
-          file=args.output)
+    print("i %s %s" % (time.strftime(iso_date_fmt, event[0]), event[3]), file=args.output)
     if event[1]:
-        print("%s %s" % ('O' if event[2] == 'DONE' else 'o',
-                         time.strftime(iso_date_fmt, event[1])),
-              file=args.output)
+        print(
+            "%s %s" % ("O" if event[2] == "DONE" else "o", time.strftime(iso_date_fmt, event[1])),
+            file=args.output,
+        )
 
 # org2tc ends here
